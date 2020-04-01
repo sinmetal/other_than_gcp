@@ -14,7 +14,16 @@ func SheetsHandler(w http.ResponseWriter, r *http.Request) {
 
 	sheetID := r.FormValue("sheetID")
 
-	s := NewSheetsService(ctx)
+	s, err := NewSheetsService(ctx)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte(err.Error()))
+		if err != nil {
+			fmt.Printf("failed write to response.err=%+v\n", err)
+		}
+		return
+	}
+
 	status, err := s.ReadTest(ctx, sheetID, "A1")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -35,15 +44,15 @@ type SheetsService struct {
 	svs *sheets.SpreadsheetsValuesService
 }
 
-func NewSheetsService(ctx context.Context) *SheetsService {
+func NewSheetsService(ctx context.Context) (*SheetsService, error) {
 	ss, err := sheets.NewService(ctx)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	svs := sheets.NewSpreadsheetsValuesService(ss)
 	return &SheetsService{
 		svs: svs,
-	}
+	}, nil
 }
 
 func (s *SheetsService) ReadTest(ctx context.Context, sheetID string, sheetRange string) (int, error) {
